@@ -137,24 +137,18 @@ export function QuoteEditor({
   return (
     <fieldset className="editor" disabled={disabled}>
       {quote.questions.length > 0 && (
-        <div className="notice" role="status">
-          <strong>À compléter</strong>
-          <ul>
-            {quote.questions.map((q) => (
-              <li key={q}>{q}</li>
-            ))}
-          </ul>
-        </div>
+        <Checklist tone="red" title="À compléter" items={quote.questions} open />
       )}
       {quote.assumptions.length > 0 && (
-        <div className="notice notice-info" role="status">
-          <strong>J&apos;ai interprété — vérifiez</strong>
-          <ul>
-            {quote.assumptions.map((a) => (
-              <li key={a}>{a}</li>
-            ))}
-          </ul>
-        </div>
+        <Checklist
+          tone="tape"
+          title={
+            quote.assumptions.length > 1
+              ? `${quote.assumptions.length} points à vérifier`
+              : "1 point à vérifier"
+          }
+          items={quote.assumptions}
+        />
       )}
 
       <div className="card">
@@ -299,5 +293,39 @@ export function QuoteEditor({
         </div>
       </dl>
     </fieldset>
+  );
+}
+
+// Compact, collapsible list of what the model asks or assumed:
+// numbered tags like the marks on a tape measure.
+function Checklist({
+  tone,
+  title,
+  items,
+  open,
+}: {
+  tone: "red" | "tape";
+  title: string;
+  items: string[];
+  open?: boolean;
+}) {
+  return (
+    <details className={`checklist checklist-${tone}`} open={open}>
+      <summary>
+        <span className="check-count">{items.length}</span>
+        <span className="check-title">{title}</span>
+        <span className="check-chevron" aria-hidden />
+      </summary>
+      <ol>
+        {items.map((item, i) => (
+          <li key={item}>
+            <span className="check-num" aria-hidden>
+              {i + 1}
+            </span>
+            <span>{item}</span>
+          </li>
+        ))}
+      </ol>
+    </details>
   );
 }

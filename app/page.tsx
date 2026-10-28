@@ -310,12 +310,15 @@ export default function Home() {
         {isEditing && quote && (
           <section className="editing">
             {!hasProfile && (
-              <button
-                type="button"
-                className="notice notice-action"
-                onClick={() => setProfileOpen(true)}
-              >
-                Ajoutez le nom de votre entreprise pour qu&apos;il apparaisse sur le devis →
+              <button type="button" className="nudge" onClick={() => setProfileOpen(true)}>
+                <span className="nudge-icon">
+                  <UserIcon size={20} />
+                </span>
+                <span className="nudge-text">
+                  Ajoutez votre entreprise
+                  <small>Elle apparaîtra en haut du devis</small>
+                </span>
+                <span className="nudge-chevron" aria-hidden />
               </button>
             )}
 
