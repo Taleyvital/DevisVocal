@@ -3,6 +3,7 @@ export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
 import { generateQuotePDF } from "@/lib/pdf";
 import { computeTotals, type ArtisanProfile, type QuoteItem } from "@/lib/quote";
+import { sanitizeTemplate, type QuoteTemplate } from "@/lib/template";
 import {
   getNextQuoteNumber,
   saveQuote,
@@ -16,6 +17,7 @@ interface QuoteRequest {
   project: string;
   items: Omit<QuoteItem, "total_fcfa">[];
   tvaRate: number;
+  template: QuoteTemplate;
   transcription: string;
 }
 
@@ -61,6 +63,7 @@ function parseRequest(body: unknown): QuoteRequest | null {
     project: str(b.project, 300),
     items,
     tvaRate: rate !== null && rate <= 0.5 ? rate : 0.18,
+    template: sanitizeTemplate(b.template),
     transcription: str(b.transcription, 20000),
   };
 }
@@ -80,7 +83,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { profile, client, project, tvaRate, transcription } = request;
+  const { profile, client, project, tvaRate, template, transcription } = request;
   // Totals are always recomputed server-side
   const totals = computeTotals(request.items, tvaRate);
   const { items, total_ht, tva, total_ttc } = totals;
@@ -102,6 +105,7 @@ export async function POST(req: NextRequest) {
       project,
       totals,
       tvaRate,
+      template,
     });
   } catch (err) {
     console.error("[quotes] generation error:", err);
