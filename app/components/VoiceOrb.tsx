@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, type RefObject } from "react";
 
-// Organic voice orb: layered wavy contours drawn as a fine line mesh with an
-// additive glow. Breathes at rest, swells with the voice while recording,
+// Organic voice orb: layered wavy contours drawn as a fine line mesh with a
+// soft glow. Breathes at rest, swells with the voice while recording,
 // spins and shimmers while the quote is analyzed.
 
 export type OrbMode = "idle" | "recording" | "busy";
@@ -19,10 +19,11 @@ interface Layer {
   bins: [from: number, to: number]; // frequency band driving this layer
 }
 
-// Tape-measure palette: yellow blade, orange, red numbers
+// Tape-measure palette: yellow blade, orange, red numbers — saturated enough
+// to read on the app's light gray background
 const LAYERS: Layer[] = [
-  { color: [255, 212, 0], lines: 18, base: 0.72, harmonics: [[3, 0.7, 0], [5, 0.4, 1.3], [2, 0.35, 2.1]], speed: 0.55, bins: [1, 4] },
-  { color: [255, 138, 30], lines: 16, base: 0.63, harmonics: [[4, 0.6, 0.7], [6, 0.35, 2.4], [3, 0.4, 4.0]], speed: -0.45, bins: [3, 8] },
+  { color: [242, 182, 0], lines: 18, base: 0.72, harmonics: [[3, 0.7, 0], [5, 0.4, 1.3], [2, 0.35, 2.1]], speed: 0.55, bins: [1, 4] },
+  { color: [255, 122, 26], lines: 16, base: 0.63, harmonics: [[4, 0.6, 0.7], [6, 0.35, 2.4], [3, 0.4, 4.0]], speed: -0.45, bins: [3, 8] },
   { color: [229, 50, 45], lines: 14, base: 0.54, harmonics: [[5, 0.55, 1.9], [3, 0.5, 0.4], [7, 0.25, 3.3]], speed: 0.75, bins: [6, 14] },
 ];
 
@@ -81,19 +82,17 @@ export function VoiceOrb({
       const cy = size / 2;
       const R = size / 2;
 
-      ctx.globalCompositeOperation = "source-over";
       ctx.clearRect(0, 0, size, size);
 
       // Halo behind everything
       const breath = 0.5 + 0.5 * Math.sin(t * 1.2);
       const halo = ctx.createRadialGradient(cx, cy, R * 0.1, cx, cy, R);
-      halo.addColorStop(0, rgba([255, 200, 40], 0.22 + level * 0.35 + breath * 0.04));
-      halo.addColorStop(0.55, rgba([229, 80, 30], 0.08 + level * 0.12));
-      halo.addColorStop(1, "rgba(0,0,0,0)");
+      halo.addColorStop(0, rgba([255, 212, 0], 0.3 + level * 0.3 + breath * 0.05));
+      halo.addColorStop(0.6, rgba([255, 170, 0], 0.08 + level * 0.1));
+      halo.addColorStop(1, "rgba(255,212,0,0)");
       ctx.fillStyle = halo;
       ctx.fillRect(0, 0, size, size);
 
-      ctx.globalCompositeOperation = "lighter";
 
       const spin = mode === "busy" ? t * 0.9 : t * 0.08;
       const pace = mode === "busy" ? 2.2 : mode === "recording" ? 1.4 : 0.6;
@@ -133,9 +132,9 @@ export function VoiceOrb({
         // Translucent body, brighter towards the rim
         contour(1, 0);
         const body = ctx.createRadialGradient(cx, cy, radius * 0.2, cx, cy, radius * 1.1);
-        body.addColorStop(0, rgba(color, 0.02));
-        body.addColorStop(0.75, rgba(color, 0.1 + level * 0.12));
-        body.addColorStop(1, rgba(color, 0.2 + level * 0.15));
+        body.addColorStop(0, rgba(color, 0.03));
+        body.addColorStop(0.75, rgba(color, 0.12 + level * 0.12));
+        body.addColorStop(1, rgba(color, 0.24 + level * 0.15));
         ctx.fillStyle = body;
         ctx.fill();
 
@@ -143,7 +142,7 @@ export function VoiceOrb({
         ctx.lineWidth = 0.8;
         for (let j = 1; j < layer.lines; j++) {
           const alpha =
-            (0.05 + 0.32 * (1 - j / layer.lines)) *
+            (0.08 + 0.45 * (1 - j / layer.lines)) *
             (mode === "busy" ? 0.8 + 0.2 * Math.sin(t * 6 + j) : 1);
           ctx.strokeStyle = rgba(color, alpha);
           contour(1 - j * 0.02, j * 0.06);
@@ -153,17 +152,17 @@ export function VoiceOrb({
         // Glowing rim
         contour(1, 0);
         ctx.lineWidth = 2;
-        ctx.strokeStyle = rgba([255, 245, 210], 0.55 + level * 0.4);
-        ctx.shadowColor = rgba(color, 1);
-        ctx.shadowBlur = R * (0.06 + level * 0.08);
+        ctx.strokeStyle = rgba(color, 0.9);
+        ctx.shadowColor = rgba(color, 0.55);
+        ctx.shadowBlur = R * (0.05 + level * 0.08);
         ctx.stroke();
         ctx.shadowBlur = 0;
       });
 
       // White-hot core, brighter with the voice
       const core = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * (0.32 + level * 0.25));
-      core.addColorStop(0, `rgba(255,250,225,${(0.4 + level * 0.5 + breath * 0.06).toFixed(3)})`);
-      core.addColorStop(1, "rgba(255,220,120,0)");
+      core.addColorStop(0, `rgba(255,230,90,${(0.45 + level * 0.45 + breath * 0.06).toFixed(3)})`);
+      core.addColorStop(1, "rgba(255,212,0,0)");
       ctx.fillStyle = core;
       ctx.fillRect(0, 0, size, size);
 
