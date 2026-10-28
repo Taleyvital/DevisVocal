@@ -14,7 +14,7 @@ import {
   StopIcon,
   UserIcon,
 } from "./components/icons";
-import { PixelGrid } from "./components/PixelGrid";
+import { VoiceOrb } from "./components/VoiceOrb";
 import { Tape } from "./components/Tape";
 import { ProfileSheet, useProfile, useTemplate } from "./components/ProfileSheet";
 import {
@@ -232,8 +232,8 @@ export default function Home() {
 
         {isCapture && (
           <section className="capture">
-            <div className="grid-card">
-              <PixelGrid
+            <div className="orb-stage">
+              <VoiceOrb
                 mode={phase === "analyzing" ? "busy" : recorder.recording ? "recording" : "idle"}
                 analyserRef={recorder.analyserRef}
               />

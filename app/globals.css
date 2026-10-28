@@ -383,16 +383,19 @@ textarea {
 }
 
 /* ─── Capture screen ──────────────────────────────────────── */
-.grid-card {
-  padding: 14px;
+/* Dark stage so the orb's additive glow reads, like a lit display */
+.orb-stage {
+  padding: 8px;
   border-radius: 28px;
-  background: var(--surface-2);
+  background: radial-gradient(circle at 50% 46%, #241d0c 0%, #141414 68%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
-/* Sized from the viewport height so the tiles stay above the dock */
-.pixel-grid {
+/* Square, sized from the viewport height so the tiles stay above the dock */
+.voice-orb {
   display: block;
-  width: clamp(180px, calc((100dvh - 470px) * 11 / 13), 100%);
+  width: clamp(180px, calc(100dvh - 480px), 100%);
+  aspect-ratio: 1;
   margin: 0 auto;
 }
 
