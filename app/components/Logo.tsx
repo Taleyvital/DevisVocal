@@ -18,7 +18,7 @@ export function LogoMark({ height = 36, tape = false }: { height?: number; tape?
       className="logo-mark"
     >
       {tape && (
-        <g>
+        <g className="logo-tape">
           {/* Graduated tape: yellow band with dark ticks across it */}
           <path
             d="M92 62 C118 36 142 36 160 58 S206 86 236 52"
@@ -36,11 +36,13 @@ export function LogoMark({ height = 36, tape = false }: { height?: number; tape?
           <rect x="232" y="40" width="8" height="24" rx="3" fill={YELLOW} transform="rotate(-38 236 52)" />
         </g>
       )}
+      <g className="logo-case">
       <rect x="2" y="2" width="96" height="96" rx="24" fill={YELLOW} />
       <circle cx="50" cy="50" r="30" fill={INK} />
       {DOTS.map(([x, y]) => (
         <circle key={`${x}-${y}`} cx={x} cy={y} r="4.6" fill={YELLOW} />
       ))}
+      </g>
     </svg>
   );
 }
