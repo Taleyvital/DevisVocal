@@ -1,10 +1,5 @@
 import PDFDocument from "pdfkit";
-import type { Artisan } from "./supabase";
-import type { QuoteItem } from "./quote";
-
-function formatFCFA(amount: number): string {
-  return amount.toLocaleString("fr-FR") + " FCFA";
-}
+import { formatFCFA, type ArtisanProfile, type QuoteItem } from "./quote";
 
 function formatDate(date: Date): string {
   return date.toLocaleDateString("fr-FR", {
@@ -15,7 +10,7 @@ function formatDate(date: Date): string {
 }
 
 export async function generateQuotePDF(
-  artisan: Artisan,
+  artisan: ArtisanProfile,
   quoteNumber: string,
   clientName: string,
   items: QuoteItem[],
@@ -42,13 +37,19 @@ export async function generateQuotePDF(
       .fillColor("white")
       .fontSize(22)
       .font("Helvetica-Bold")
-      .text(artisan.company_name ?? artisan.phone_number, 60, 65);
-    doc
-      .fontSize(10)
-      .font("Helvetica")
-      .text(`Tél : ${artisan.phone_number}`, 60, 95);
-    if (artisan.email) doc.text(`Email : ${artisan.email}`, 60, 108);
-    if (artisan.address) doc.text(artisan.address, 60, 121);
+      .text(artisan.company_name || artisan.name || "Devis", 60, 65, {
+        width: 330,
+        ellipsis: true,
+      });
+    doc.fontSize(10).font("Helvetica");
+    const contactLines = [
+      artisan.phone && `Tél : ${artisan.phone}`,
+      artisan.email && `Email : ${artisan.email}`,
+      artisan.address,
+    ].filter(Boolean) as string[];
+    contactLines.forEach((line, i) =>
+      doc.text(line, 60, 95 + i * 13, { width: 330, ellipsis: true })
+    );
 
     // Quote title on right
     doc

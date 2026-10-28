@@ -1,17 +1,4 @@
-import type { QuoteItem } from "./quote";
-
-export interface ExtractedQuote {
-  client: string;
-  items: QuoteItem[];
-  total_ht: number;
-  tva: number;
-  total_ttc: number;
-}
-
-export interface MissingInfo {
-  missing: true;
-  questions: string[];
-}
+import type { DraftItem, QuoteDraft } from "./quote";
 
 const QUOTE_SCHEMA = {
   type: "object",
@@ -52,9 +39,11 @@ Règles :
 - Les unités courantes : m2, m3, ml, u (unité), kg, forfait, sac, m
 - Retourne UNIQUEMENT du JSON valide, sans texte autour`;
 
+// Always returns the lines found, with null quantity/price where unknown,
+// plus questions for the artisan — the UI lets them fill the gaps.
 export async function extractQuoteData(
   transcription: string
-): Promise<ExtractedQuote | MissingInfo> {
+): Promise<QuoteDraft> {
   const res = await fetch("https://api.meta.ai/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -89,35 +78,17 @@ export async function extractQuoteData(
   const content = data.choices?.[0]?.message?.content as string;
   const parsed = JSON.parse(content);
 
-  if (parsed.missing_questions?.length > 0) {
-    return { missing: true, questions: parsed.missing_questions as string[] };
-  }
-
-  // Compute totals
-  const items: QuoteItem[] = parsed.items.map(
-    (item: {
-      designation: string;
-      quantity: number;
-      unit: string;
-      unit_price_fcfa: number;
-    }) => ({
-      designation: item.designation,
-      quantity: item.quantity,
-      unit: item.unit,
-      unit_price_fcfa: item.unit_price_fcfa,
-      total_fcfa: Math.round(item.quantity * item.unit_price_fcfa),
-    })
-  );
-
-  const total_ht = items.reduce((sum, i) => sum + i.total_fcfa, 0);
-  const tva = Math.round(total_ht * 0.18);
-  const total_ttc = total_ht + tva;
+  const items: DraftItem[] = (parsed.items ?? []).map((item: DraftItem) => ({
+    designation: String(item.designation ?? ""),
+    quantity: typeof item.quantity === "number" ? item.quantity : null,
+    unit: String(item.unit ?? "u"),
+    unit_price_fcfa:
+      typeof item.unit_price_fcfa === "number" ? item.unit_price_fcfa : null,
+  }));
 
   return {
-    client: parsed.client as string,
+    client: String(parsed.client ?? "À définir"),
     items,
-    total_ht,
-    tva,
-    total_ttc,
+    questions: (parsed.missing_questions ?? []) as string[],
   };
 }

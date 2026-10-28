@@ -1,47 +1,39 @@
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegPath from "@ffmpeg-installer/ffmpeg";
-import { Readable, PassThrough } from "stream";
 import FormData from "form-data";
+import { mkdtemp, readFile, rm, writeFile } from "fs/promises";
+import { tmpdir } from "os";
+import { join } from "path";
 
 ffmpeg.setFfmpegPath(ffmpegPath.path);
 
-// Convert any audio buffer to WAV mono 16kHz (required by Meta ASR API)
-async function toWav(inputBuffer: Buffer, inputFormat: string): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    const inputStream = Readable.from(inputBuffer);
-    const outputStream = new PassThrough();
-    const chunks: Buffer[] = [];
-
-    outputStream.on("data", (chunk: Buffer) => chunks.push(chunk));
-    outputStream.on("end", () => resolve(Buffer.concat(chunks)));
-    outputStream.on("error", reject);
-
-    ffmpeg(inputStream)
-      .inputFormat(inputFormat)
-      .audioChannels(1)
-      .audioFrequency(16000)
-      .audioCodec("pcm_s16le")
-      .format("wav")
-      .on("error", reject)
-      .pipe(outputStream, { end: true });
-  });
+// Convert any browser recording (webm/opus, mp4/aac, ogg…) to WAV mono 16kHz
+// (required by Meta ASR API). Goes through temp files rather than pipes:
+// Safari's mp4 recordings can't be decoded from a non-seekable stream.
+async function toWav(inputBuffer: Buffer): Promise<Buffer> {
+  const dir = await mkdtemp(join(tmpdir(), "devisvocal-"));
+  const inputPath = join(dir, "input");
+  const outputPath = join(dir, "output.wav");
+  try {
+    await writeFile(inputPath, inputBuffer);
+    await new Promise<void>((resolve, reject) => {
+      ffmpeg(inputPath)
+        .audioChannels(1)
+        .audioFrequency(16000)
+        .audioCodec("pcm_s16le")
+        .format("wav")
+        .on("end", () => resolve())
+        .on("error", reject)
+        .save(outputPath);
+    });
+    return await readFile(outputPath);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 }
 
-function mimeToFfmpegFormat(mimeType: string): string {
-  if (mimeType.includes("ogg")) return "ogg";
-  if (mimeType.includes("mp4") || mimeType.includes("m4a")) return "mp4";
-  if (mimeType.includes("mpeg") || mimeType.includes("mp3")) return "mp3";
-  if (mimeType.includes("webm")) return "webm";
-  if (mimeType.includes("wav")) return "wav";
-  return "ogg"; // WhatsApp default
-}
-
-export async function transcribeAudio(
-  audioBuffer: Buffer,
-  mimeType: string
-): Promise<string> {
-  const format = mimeToFfmpegFormat(mimeType);
-  const wavBuffer = await toWav(audioBuffer, format);
+export async function transcribeAudio(audioBuffer: Buffer): Promise<string> {
+  const wavBuffer = await toWav(audioBuffer);
 
   const form = new FormData();
   form.append(
