@@ -58,11 +58,54 @@ export function PlusIcon({ size = 20 }: IconProps) {
   );
 }
 
-export function BuildingIcon({ size = 20 }: IconProps) {
+export function KeyboardIcon({ size = 22 }: IconProps) {
   return (
     <svg {...svg(size)}>
-      <rect x="4" y="2" width="16" height="20" rx="2" />
-      <path d="M9 22v-4h6v4M8 6h.01M16 6h.01M12 6h.01M12 10h.01M12 14h.01M16 10h.01M16 14h.01M8 10h.01M8 14h.01" />
+      <rect x="2" y="5" width="20" height="14" rx="3" />
+      <path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 13h.01M18 13h.01M8 16h8M10 13h4" />
+    </svg>
+  );
+}
+
+export function DocIcon({ size = 22 }: IconProps) {
+  return (
+    <svg {...svg(size)}>
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <path d="M14 2v6h6M8 13h8M8 17h5" />
+    </svg>
+  );
+}
+
+export function CloseIcon({ size = 22 }: IconProps) {
+  return (
+    <svg {...svg(size)}>
+      <path d="M18 6 6 18M6 6l12 12" />
+    </svg>
+  );
+}
+
+export function CheckIcon({ size = 22 }: IconProps) {
+  return (
+    <svg {...svg(size)}>
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  );
+}
+
+export function EditIcon({ size = 22 }: IconProps) {
+  return (
+    <svg {...svg(size)}>
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
+    </svg>
+  );
+}
+
+export function UserIcon({ size = 22 }: IconProps) {
+  return (
+    <svg {...svg(size)}>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21a8 8 0 0 1 16 0" />
     </svg>
   );
 }

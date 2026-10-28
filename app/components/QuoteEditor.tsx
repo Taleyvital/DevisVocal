@@ -104,11 +104,13 @@ export function QuoteEditor({
   quote,
   onChange,
   tvaRate,
+  currency,
   disabled,
 }: {
   quote: EditQuote;
   onChange: (q: EditQuote) => void;
   tvaRate: number;
+  currency: string;
   disabled?: boolean;
 }) {
   const { lines } = quote;
@@ -155,6 +157,7 @@ export function QuoteEditor({
         </div>
       )}
 
+      <div className="card">
       <label className="field">
         <span>Client</span>
         <input
@@ -173,6 +176,7 @@ export function QuoteEditor({
           autoComplete="off"
         />
       </label>
+      </div>
 
       <h2 className="section-title">Prestations</h2>
       <ol className="lines">
@@ -235,7 +239,7 @@ export function QuoteEditor({
               {l.hint && <p className="line-hint">{l.hint}</p>}
               <div className="line-footer">
                 <span className={lineTotal === null ? "muted" : "line-total"}>
-                  {lineTotal === null ? "Total : à compléter" : formatFCFA(lineTotal)}
+                  {lineTotal === null ? "Total : à compléter" : formatFCFA(lineTotal, currency)}
                 </span>
                 <button
                   type="button"
@@ -281,17 +285,17 @@ export function QuoteEditor({
           <>
             <div>
               <dt>Total HT</dt>
-              <dd>{formatFCFA(totals.total_ht)}</dd>
+              <dd>{formatFCFA(totals.total_ht, currency)}</dd>
             </div>
             <div>
               <dt>TVA ({ratePct} %)</dt>
-              <dd>{formatFCFA(totals.tva)}</dd>
+              <dd>{formatFCFA(totals.tva, currency)}</dd>
             </div>
           </>
         )}
         <div className="grand">
           <dt>{quote.tva ? "Total TTC" : "Total"}</dt>
-          <dd>{formatFCFA(totals.total_ttc)}</dd>
+          <dd>{formatFCFA(totals.total_ttc, currency)}</dd>
         </div>
       </dl>
     </fieldset>

@@ -1,8 +1,21 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { computeTotals, formatFCFA, type QuoteDraft } from "@/lib/quote";
-import { BuildingIcon, MicIcon, ShareIcon, StopIcon } from "./components/icons";
+import { computeTotals, formatFCFA, formatNumber, type QuoteDraft } from "@/lib/quote";
+import {
+  CheckIcon,
+  CloseIcon,
+  DocIcon,
+  EditIcon,
+  KeyboardIcon,
+  MicIcon,
+  PlusIcon,
+  ShareIcon,
+  StopIcon,
+  UserIcon,
+} from "./components/icons";
+import { PixelGrid } from "./components/PixelGrid";
+import { Tape } from "./components/Tape";
 import { ProfileSheet, useProfile, useTemplate } from "./components/ProfileSheet";
 import {
   completeItems,
@@ -45,6 +58,13 @@ export default function Home() {
   const { catalogue, tva_rate: tvaRate } = template;
   const [profileOpen, setProfileOpen] = useState(false);
   const hasProfile = Boolean(profile.company_name || profile.name);
+  const initials =
+    (profile.company_name || profile.name)
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0]?.toUpperCase())
+      .join("");
 
   const recorder = useRecorder({
     maxSeconds: MAX_SECONDS,
@@ -148,7 +168,7 @@ export default function Home() {
     const { file, number, totalTtc } = generated;
     const client = quote?.client;
     const label = template.title.charAt(0) + template.title.slice(1).toLowerCase();
-    const text = `${label} ${number}${client ? ` – ${client}` : ""} : ${formatFCFA(totalTtc)}${effectiveTva ? " TTC" : ""}`;
+    const text = `${label} ${number}${client ? ` – ${client}` : ""} : ${formatFCFA(totalTtc, template.currency)}${effectiveTva ? " TTC" : ""}`;
 
     if (navigator.canShare?.({ files: [file] })) {
       try {
@@ -184,19 +204,22 @@ export default function Home() {
   }
 
   const isCapture = phase === "idle" || phase === "analyzing";
+  const isEditing = quote !== null && (phase === "editing" || phase === "amending" || phase === "generating");
+  const currency = template.currency;
+  const title = isCapture ? "Dicter" : phase === "ready" ? "Prêt" : "Devis";
 
   return (
     <div className="app">
       <header className="topbar">
-        <span className="brand">DevisVocal</span>
+        <h1 className="screen-title">{title}</h1>
         <button
           type="button"
-          className="btn btn-ghost btn-sm"
+          className="avatar"
           onClick={() => setProfileOpen(true)}
+          aria-label="Mon entreprise et modèle de devis"
         >
-          <BuildingIcon />
-          Mon entreprise
-          {!hasProfile && <span className="dot" aria-label="à compléter" />}
+          {initials || <UserIcon />}
+          {!hasProfile && <span className="dot" aria-hidden />}
         </button>
       </header>
 
@@ -209,95 +232,90 @@ export default function Home() {
 
         {isCapture && (
           <section className="capture">
-            <h1>Dictez votre devis</h1>
-            <p className="muted hint">
-              Ex&nbsp;: «&nbsp;Devis pour M.&nbsp;Kouassi, carrelage 20&nbsp;m² à
-              8&nbsp;000&nbsp;F le m², plinthes 15&nbsp;mètres à 1&nbsp;500&nbsp;F.&nbsp;»
-            </p>
-
-            <button
-              type="button"
-              className={`mic ${recorder.recording ? "is-recording" : ""}`}
-              onClick={recorder.recording ? recorder.stop : recorder.start}
-              disabled={phase === "analyzing"}
-              aria-label={
-                recorder.recording ? "Arrêter l'enregistrement" : "Enregistrer une note vocale"
-              }
-            >
-              {phase === "analyzing" ? (
-                <span className="spinner" aria-hidden />
-              ) : recorder.recording ? (
-                <StopIcon size={56} />
-              ) : (
-                <MicIcon size={64} />
-              )}
-            </button>
+            <div className="grid-card">
+              <PixelGrid
+                mode={phase === "analyzing" ? "busy" : recorder.recording ? "recording" : "idle"}
+                analyserRef={recorder.analyserRef}
+              />
+            </div>
 
             <p className="status" aria-live="polite">
               {phase === "analyzing"
-                ? "Analyse en cours…"
+                ? "Je prépare votre devis…"
                 : recorder.recording
-                  ? `Enregistrement ${formatDuration(recorder.seconds)} / ${formatDuration(MAX_SECONDS)} — touchez pour terminer`
-                  : "Touchez le micro pour commencer"}
+                  ? "Je vous écoute. Touchez le bouton rouge pour terminer."
+                  : "Touchez le bouton jaune et dictez votre devis."}
             </p>
 
-            {!recorder.recording && phase === "idle" && (
-              <div className="type-instead">
-                {typing ? (
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      if (typedText.trim()) analyze({ text: typedText });
-                    }}
-                  >
-                    <label className="field">
-                      <span>Décrivez le devis</span>
-                      <textarea
-                        rows={4}
-                        value={typedText}
-                        onChange={(e) => setTypedText(e.target.value)}
-                        placeholder="Client, prestations, quantités, prix…"
-                      />
-                    </label>
-                    <button
-                      type="submit"
-                      className="btn btn-primary btn-block"
-                      disabled={!typedText.trim()}
-                    >
-                      Analyser
-                    </button>
-                  </form>
-                ) : (
-                  <button
-                    type="button"
-                    className="link-btn"
-                    onClick={() => setTyping(true)}
-                  >
-                    Écrire plutôt
-                  </button>
-                )}
+            <div className="timer-card">
+              <div className="timer-head">
+                <span className="timer-label">Durée</span>
+                <span className="timer-value">
+                  {formatDuration(recorder.seconds)}
+                  <small> / {formatDuration(MAX_SECONDS)}</small>
+                </span>
+              </div>
+              <Tape seconds={recorder.recording ? recorder.seconds : 0} max={MAX_SECONDS} />
+            </div>
+
+            {typing && phase === "idle" && !recorder.recording ? (
+              <form
+                className="card type-card"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (typedText.trim()) analyze({ text: typedText });
+                }}
+              >
+                <label className="field">
+                  <span>Décrivez le devis</span>
+                  <textarea
+                    rows={4}
+                    autoFocus
+                    value={typedText}
+                    onChange={(e) => setTypedText(e.target.value)}
+                    placeholder="Client, prestations, quantités, prix…"
+                  />
+                </label>
+                <button
+                  type="submit"
+                  className="btn btn-ink btn-block"
+                  disabled={!typedText.trim()}
+                >
+                  Analyser
+                </button>
+              </form>
+            ) : (
+              <div className="tiles">
+                <button type="button" className="tile tile-steel" onClick={() => setProfileOpen(true)}>
+                  <span className="tile-kicker">Entreprise</span>
+                  <span className="tile-main">
+                    {profile.company_name || profile.name || "À compléter"}
+                  </span>
+                  <span className="tile-ticks" aria-hidden />
+                </button>
+                <button type="button" className="tile tile-tape" onClick={() => setProfileOpen(true)}>
+                  <span className="tile-kicker">Modèle</span>
+                  <span className="tile-main">{template.source ? template.title : "Standard"}</span>
+                  <span className="tile-sub">
+                    {template.catalogue.length
+                      ? `${template.catalogue.length} prix connus`
+                      : "Importer un ancien devis"}
+                  </span>
+                </button>
               </div>
             )}
           </section>
         )}
 
-        {quote && (phase === "editing" || phase === "amending" || phase === "generating") && (
-          <section>
-            <div className="section-head">
-              <h1>Votre devis</h1>
-              <button type="button" className="link-btn" onClick={reset}>
-                Recommencer
-              </button>
-            </div>
-
+        {isEditing && quote && (
+          <section className="editing">
             {!hasProfile && (
               <button
                 type="button"
                 className="notice notice-action"
                 onClick={() => setProfileOpen(true)}
               >
-                Ajoutez le nom de votre entreprise pour qu&apos;il apparaisse
-                sur le devis →
+                Ajoutez le nom de votre entreprise pour qu&apos;il apparaisse sur le devis →
               </button>
             )}
 
@@ -305,63 +323,45 @@ export default function Home() {
               quote={quote}
               onChange={setQuote}
               tvaRate={tvaRate}
+              currency={currency}
               disabled={phase !== "editing"}
             />
 
-            <div className="amend">
-              <h2 className="section-title">Corriger à la voix</h2>
+            <form
+              className="card amend"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (correction.trim()) analyze({ text: correction });
+              }}
+            >
+              <h2 className="card-title">Corriger</h2>
               <p className="muted amend-hint">
-                Ex&nbsp;: «&nbsp;ajoute 10 sacs de ciment à 5&nbsp;500&nbsp;», «&nbsp;enlève
-                la peinture&nbsp;», «&nbsp;le client c&apos;est M.&nbsp;Konan&nbsp;»
+                Touchez le bouton jaune et dites par ex.&nbsp;: «&nbsp;ajoute 10 sacs de ciment
+                à 5&nbsp;500&nbsp;», «&nbsp;enlève la peinture&nbsp;». Ou écrivez-le&nbsp;:
               </p>
-              <div className="amend-row">
-                <button
-                  type="button"
-                  className={`mic-sm ${recorder.recording ? "is-recording" : ""}`}
-                  onClick={recorder.recording ? recorder.stop : recorder.start}
-                  disabled={phase !== "editing"}
-                  aria-label={
-                    recorder.recording ? "Terminer la correction" : "Dicter une correction"
+              <div className="amend-form">
+                <input
+                  value={correction}
+                  onChange={(e) => setCorrection(e.target.value)}
+                  placeholder={
+                    recorder.recording
+                      ? `Enregistrement ${formatDuration(recorder.seconds)}…`
+                      : phase === "amending"
+                        ? "Correction en cours…"
+                        : "Votre correction"
                   }
+                  disabled={phase !== "editing" || recorder.recording}
+                  aria-label="Correction écrite"
+                />
+                <button
+                  type="submit"
+                  className="btn btn-ink"
+                  disabled={!correction.trim() || phase !== "editing"}
                 >
-                  {phase === "amending" ? (
-                    <span className="spinner spinner-sm" aria-hidden />
-                  ) : recorder.recording ? (
-                    <StopIcon size={26} />
-                  ) : (
-                    <MicIcon size={28} />
-                  )}
+                  OK
                 </button>
-                <form
-                  className="amend-form"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    if (correction.trim()) analyze({ text: correction });
-                  }}
-                >
-                  <input
-                    value={correction}
-                    onChange={(e) => setCorrection(e.target.value)}
-                    placeholder={
-                      recorder.recording
-                        ? `Enregistrement ${formatDuration(recorder.seconds)}…`
-                        : phase === "amending"
-                          ? "Correction en cours…"
-                          : "Ou écrivez une correction"
-                    }
-                    disabled={phase !== "editing" || recorder.recording}
-                    aria-label="Correction écrite"
-                  />
-                  <button
-                    type="submit"
-                    className="btn btn-primary btn-sm"
-                    disabled={!correction.trim() || phase !== "editing"}
-                  >
-                    OK
-                  </button>
-                </form>
               </div>
-            </div>
+            </form>
 
             {transcription && (
               <details className="transcript">
@@ -370,65 +370,100 @@ export default function Home() {
               </details>
             )}
 
-            <div className="action-bar">
-              <button
-                type="button"
-                className="btn btn-primary btn-block btn-lg"
-                onClick={generate}
-                disabled={!items || phase !== "editing" || recorder.recording}
-              >
-                {phase === "generating"
-                  ? "Génération…"
-                  : items
-                    ? "Générer le PDF"
-                    : "Complétez les champs en rouge"}
-              </button>
-            </div>
+            {!items && phase === "editing" && (
+              <p className="pending-hint">Complétez les champs en rouge pour générer le PDF.</p>
+            )}
           </section>
         )}
 
         {phase === "ready" && generated && (
           <section className="ready">
             <div className="ready-card">
-              <p className="muted">Devis prêt</p>
-              <h1>{generated.number}</h1>
-              {quote?.client && <p>{quote.client}</p>}
-              <p className="ready-total">
-                {formatFCFA(generated.totalTtc, template.currency)}
-                {effectiveTva ? " TTC" : ""}
+              <span className="tape-edge" aria-hidden />
+              <p className="ready-kicker">
+                {template.title} · {generated.number}
               </p>
+              {quote?.client && <p className="ready-client">{quote.client}</p>}
+              <p className="ready-total">
+                {formatNumber(generated.totalTtc)}
+                <small>
+                  {" "}
+                  {currency}
+                  {effectiveTva ? " TTC" : ""}
+                </small>
+              </p>
+              <a className="ready-link" href={generated.url} target="_blank" rel="noopener">
+                Voir le PDF
+              </a>
             </div>
-
-            <button
-              type="button"
-              className="btn btn-share btn-block btn-lg"
-              onClick={share}
-            >
-              <ShareIcon /> Partager sur WhatsApp
-            </button>
-            <a
-              className="btn btn-ghost btn-block"
-              href={generated.url}
-              target="_blank"
-              rel="noopener"
-            >
-              Voir le PDF
-            </a>
-            <div className="ready-links">
-              <button
-                type="button"
-                className="link-btn"
-                onClick={() => setPhase("editing")}
-              >
-                Modifier
-              </button>
-              <button type="button" className="link-btn" onClick={reset}>
-                Nouveau devis
-              </button>
-            </div>
+            <p className="muted ready-hint">
+              Touchez « Partager » puis choisissez WhatsApp et votre client.
+            </p>
           </section>
         )}
       </main>
+
+      <nav className="dock" aria-label="Actions">
+        {isCapture && (
+          <>
+            <DockButton
+              label="Écrire"
+              onClick={() => setTyping((t) => !t)}
+              disabled={phase !== "idle" || recorder.recording}
+              pressed={typing}
+            >
+              <KeyboardIcon />
+            </DockButton>
+            <MicPill
+              recording={recorder.recording}
+              busy={phase === "analyzing"}
+              onClick={recorder.recording ? recorder.stop : recorder.start}
+              label={recorder.recording ? "Terminer" : "Dicter"}
+            />
+            <DockButton label="Modèle" onClick={() => setProfileOpen(true)} disabled={recorder.recording}>
+              <DocIcon />
+            </DockButton>
+          </>
+        )}
+
+        {isEditing && (
+          <>
+            <DockButton label="Annuler" onClick={reset} disabled={recorder.recording}>
+              <CloseIcon />
+            </DockButton>
+            <MicPill
+              recording={recorder.recording}
+              busy={phase === "amending"}
+              disabled={phase !== "editing"}
+              onClick={recorder.recording ? recorder.stop : recorder.start}
+              label={recorder.recording ? "Terminer" : "Corriger"}
+            />
+            <DockButton
+              label={phase === "generating" ? "…" : "PDF"}
+              onClick={generate}
+              disabled={!items || phase !== "editing" || recorder.recording}
+              variant="ink"
+            >
+              {phase === "generating" ? <span className="spinner spinner-sm" aria-hidden /> : <CheckIcon />}
+            </DockButton>
+          </>
+        )}
+
+        {phase === "ready" && (
+          <>
+            <DockButton label="Modifier" onClick={() => setPhase("editing")}>
+              <EditIcon />
+            </DockButton>
+            <button type="button" className="pill pill-share" onClick={share}>
+              <ShareIcon size={26} />
+              <span className="pill-label">Partager</span>
+            </button>
+            <DockButton label="Nouveau" onClick={reset}>
+              <PlusIcon size={22} />
+            </DockButton>
+          </>
+        )}
+      </nav>
 
       {profileOpen && (
         <ProfileSheet
@@ -440,5 +475,72 @@ export default function Home() {
         />
       )}
     </div>
+  );
+}
+
+function DockButton({
+  label,
+  onClick,
+  disabled,
+  pressed,
+  variant,
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  pressed?: boolean;
+  variant?: "ink";
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="dock-item">
+      <button
+        type="button"
+        className={`dock-btn ${variant === "ink" ? "dock-btn-ink" : ""}`}
+        onClick={onClick}
+        disabled={disabled}
+        aria-pressed={pressed}
+        aria-label={label}
+      >
+        {children}
+      </button>
+      <span className="dock-label" aria-hidden>
+        {label}
+      </span>
+    </div>
+  );
+}
+
+function MicPill({
+  recording,
+  busy,
+  disabled,
+  onClick,
+  label,
+}: {
+  recording: boolean;
+  busy: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      className={`pill ${recording ? "is-recording" : ""}`}
+      onClick={onClick}
+      disabled={(disabled || busy) && !recording}
+      aria-label={recording ? "Terminer l'enregistrement" : label}
+    >
+      {busy ? (
+        <span className="spinner spinner-sm spinner-dark" aria-hidden />
+      ) : recording ? (
+        <StopIcon size={24} />
+      ) : (
+        <MicIcon size={26} />
+      )}
+      <span className="pill-label">{busy ? "Analyse…" : label}</span>
+    </button>
   );
 }

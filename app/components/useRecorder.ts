@@ -31,6 +31,9 @@ export function useRecorder({ maxSeconds, onComplete, onError }: Options) {
   const [seconds, setSeconds] = useState(0);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const timerRef = useRef<number | null>(null);
+  // Live input level for the visualizer (frequency bins, 0-255)
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
 
   // Keep the latest callbacks without restarting the recorder
   const callbacks = useRef({ onComplete, onError });
@@ -41,6 +44,12 @@ export function useRecorder({ maxSeconds, onComplete, onError }: Options) {
   const clearTimer = () => {
     if (timerRef.current !== null) window.clearInterval(timerRef.current);
     timerRef.current = null;
+  };
+
+  const closeAnalyser = () => {
+    analyserRef.current = null;
+    audioCtxRef.current?.close().catch(() => {});
+    audioCtxRef.current = null;
   };
 
   const stop = useCallback(() => {
@@ -72,6 +81,22 @@ export function useRecorder({ maxSeconds, onComplete, onError }: Options) {
       return;
     }
 
+    // Visualizer only — recording works without it
+    try {
+      const Ctx =
+        window.AudioContext ??
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const ctx = new Ctx();
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 64;
+      analyser.smoothingTimeConstant = 0.75;
+      ctx.createMediaStreamSource(stream).connect(analyser);
+      audioCtxRef.current = ctx;
+      analyserRef.current = analyser;
+    } catch {
+      closeAnalyser();
+    }
+
     const mimeType = pickMimeType();
     const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
     const chunks: Blob[] = [];
@@ -82,6 +107,7 @@ export function useRecorder({ maxSeconds, onComplete, onError }: Options) {
     recorder.onstop = () => {
       stream.getTracks().forEach((t) => t.stop());
       clearTimer();
+      closeAnalyser();
       setRecording(false);
       recorderRef.current = null;
       const blob = new Blob(chunks, {
@@ -110,10 +136,11 @@ export function useRecorder({ maxSeconds, onComplete, onError }: Options) {
   useEffect(
     () => () => {
       clearTimer();
+      closeAnalyser();
       recorderRef.current?.stream.getTracks().forEach((t) => t.stop());
     },
     []
   );
 
-  return { recording, seconds, start, stop };
+  return { recording, seconds, start, stop, analyserRef };
 }
