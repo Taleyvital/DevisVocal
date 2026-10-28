@@ -16,6 +16,7 @@ import {
 } from "./components/icons";
 import { VoiceOrb } from "./components/VoiceOrb";
 import { ErrorDialog } from "./components/ErrorDialog";
+import { LogoMark } from "./components/Logo";
 import { Tape } from "./components/Tape";
 import { ProfileSheet, useProfile, useTemplate } from "./components/ProfileSheet";
 import {
@@ -212,7 +213,10 @@ export default function Home() {
   return (
     <div className="app">
       <header className="topbar">
-        <h1 className="screen-title">{title}</h1>
+        <div className="brand-title">
+          <LogoMark height={40} />
+          <h1 className="screen-title">{title}</h1>
+        </div>
         <button
           type="button"
           className="avatar"
@@ -280,7 +284,8 @@ export default function Home() {
                   Analyser
                 </button>
               </form>
-            ) : (
+            ) : recorder.recording ? null : (
+              // Hidden while recording so the orb has the stage
               <div className="tiles">
                 <button type="button" className="tile tile-steel" onClick={() => setProfileOpen(true)}>
                   <span className="tile-kicker">Entreprise</span>
