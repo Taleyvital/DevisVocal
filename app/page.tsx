@@ -15,6 +15,7 @@ import {
   UserIcon,
 } from "./components/icons";
 import { VoiceOrb } from "./components/VoiceOrb";
+import { ErrorDialog } from "./components/ErrorDialog";
 import { Tape } from "./components/Tape";
 import { ProfileSheet, useProfile, useTemplate } from "./components/ProfileSheet";
 import {
@@ -224,11 +225,6 @@ export default function Home() {
       </header>
 
       <main className="content">
-        {error && (
-          <div className="alert" role="alert">
-            {error}
-          </div>
-        )}
 
         {isCapture && (
           <section className="capture">
@@ -467,6 +463,8 @@ export default function Home() {
           </>
         )}
       </nav>
+
+      {error && <ErrorDialog message={error} onClose={() => setError(null)} />}
 
       {profileOpen && (
         <ProfileSheet

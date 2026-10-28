@@ -1010,6 +1010,104 @@ textarea {
   cursor: pointer;
 }
 
+/* ─── Error popup with the mascot ──────────────────────────── */
+.popup-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(20, 20, 20, 0.35);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  animation: fade-in 0.2s ease-out;
+}
+
+.popup {
+  position: relative;
+  width: 100%;
+  max-width: 340px;
+  margin-top: 96px;
+  padding: 96px 22px 22px;
+  border-radius: 28px;
+  background: var(--surface);
+  text-align: center;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.22);
+  animation: pop-in 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.25);
+}
+
+/* Yellow tape band across the top of the card */
+.popup::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  border-radius: 28px 28px 0 0;
+  background-color: var(--tape);
+  background-image:
+    linear-gradient(to right, var(--ink) 1.5px, transparent 1.5px),
+    linear-gradient(to right, rgba(20, 20, 20, 0.6) 1px, transparent 1px);
+  background-size: 40px 12px, 8px 7px;
+  background-repeat: repeat-x;
+}
+
+.popup-mascot {
+  position: absolute;
+  top: -112px;
+  left: 50%;
+  transform: translateX(-50%);
+  animation: mascot-in 0.5s 0.1s cubic-bezier(0.2, 0.9, 0.3, 1.3) both;
+}
+
+.mascot {
+  display: block;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.15));
+}
+
+.popup-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.popup-message {
+  margin: 8px 0 20px;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.94);
+  }
+}
+
+@keyframes mascot-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 24px) scale(0.8);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .popup-backdrop,
+  .popup,
+  .popup-mascot {
+    animation: none;
+  }
+}
+
 /* ─── Ready screen ────────────────────────────────────────── */
 .ready-card {
   position: relative;
