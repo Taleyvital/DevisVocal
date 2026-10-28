@@ -95,7 +95,8 @@ export function PixelGrid({
       // recording: mirrored bars from the center column, centered vertically
       const d = Math.abs(c - (COLS - 1) / 2);
       const level = (bins[Math.min(31, 1 + d * 2)] ?? 0) / 255;
-      const half = Math.round(level * 1.35 * (ROWS / 2));
+      // Curve keeps normal speech in the middle rows; only loud peaks fill the grid
+      const half = Math.round(Math.pow(level, 1.8) * (ROWS / 2));
       const center = (ROWS - 1) / 2;
       const dist = Math.abs(r - center);
       if (dist <= Math.max(0.5, half)) return dist >= half - 0.5 && half > 1 ? "#b8211d" : RED;

@@ -392,13 +392,13 @@ textarea {
 /* Sized from the viewport height so the tiles stay above the dock */
 .pixel-grid {
   display: block;
-  width: clamp(180px, calc((100dvh - 560px) * 11 / 13), 100%);
+  width: clamp(180px, calc((100dvh - 470px) * 11 / 13), 100%);
   margin: 0 auto;
 }
 
 .status {
   min-height: 2.9em;
-  margin: 14px 4px 10px;
+  margin: 10px 4px 6px;
   font-weight: 600;
   text-align: center;
 }
@@ -413,11 +413,11 @@ textarea {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  padding: 12px 16px 6px;
+  padding: 7px 14px 4px;
 }
 
 .timer-label {
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -426,21 +426,21 @@ textarea {
 
 .timer-value {
   font-family: var(--font-dot);
-  font-size: 1.9rem;
+  font-size: 1.3rem;
   font-weight: 700;
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
 .timer-value small {
-  font-size: 0.95rem;
+  font-size: 0.8rem;
   color: var(--muted);
 }
 
 /* Tape measure: yellow blade, black graduations, red minute numbers */
 .tape {
   position: relative;
-  height: 46px;
+  height: 30px;
   overflow: hidden;
   background: var(--tape);
   border-top: 1px solid rgba(0, 0, 0, 0.12);
@@ -455,7 +455,7 @@ textarea {
     linear-gradient(to right, var(--ink) 1.5px, transparent 1.5px),
     linear-gradient(to right, var(--ink) 1px, transparent 1px),
     linear-gradient(to right, rgba(20, 20, 20, 0.7) 1px, transparent 1px);
-  background-size: 60px 22px, 30px 14px, 6px 8px;
+  background-size: 60px 14px, 30px 9px, 6px 5px;
   background-repeat: repeat-x;
   background-position: 0 0;
   transition: transform 0.9s linear;
@@ -463,10 +463,10 @@ textarea {
 
 .tape-label {
   position: absolute;
-  top: 22px;
+  top: 14px;
   transform: translateX(-50%);
   font-family: var(--font-dot);
-  font-size: 1rem;
+  font-size: 0.8rem;
   font-weight: 800;
   line-height: 1;
   color: var(--ink);
@@ -492,7 +492,7 @@ textarea {
   top: -1px;
   left: 50%;
   transform: translateX(-50%);
-  border: 7px solid transparent;
+  border: 5px solid transparent;
   border-top-color: var(--red);
 }
 
@@ -506,8 +506,8 @@ textarea {
 .tiles {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-top: 12px;
+  gap: 10px;
+  margin-top: 10px;
 }
 
 .tile {
@@ -515,32 +515,35 @@ textarea {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 2px;
-  min-height: 132px;
-  padding: 14px;
+  gap: 0;
+  min-height: 70px;
+  padding: 10px 12px;
   overflow: hidden;
   border: none;
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   text-align: left;
   cursor: pointer;
 }
 
 .tile-kicker {
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   font-weight: 700;
   opacity: 0.75;
 }
 
 .tile-main {
-  font-size: 1.15rem;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 0.95rem;
   font-weight: 800;
-  line-height: 1.15;
-  overflow-wrap: anywhere;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .tile-sub {
   margin-top: auto;
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   font-weight: 600;
 }
 
@@ -551,25 +554,25 @@ textarea {
 
 .tile-ticks {
   position: absolute;
-  left: 14px;
-  right: 14px;
-  bottom: 12px;
-  height: 26px;
+  left: 12px;
+  right: 12px;
+  bottom: 8px;
+  height: 12px;
   background-image:
     linear-gradient(to right, rgba(255, 255, 255, 0.9) 2px, transparent 2px),
     linear-gradient(to right, rgba(255, 255, 255, 0.5) 1px, transparent 1px);
-  background-size: 40px 26px, 8px 14px;
+  background-size: 40px 12px, 8px 6px;
   background-repeat: repeat-x;
   background-position: 0 100%;
 }
 
 .tile-tape {
-  padding-top: 24px;
+  padding-top: 16px;
   background-color: var(--tape);
   background-image:
     linear-gradient(to right, var(--ink) 1.5px, transparent 1.5px),
     linear-gradient(to right, rgba(20, 20, 20, 0.6) 1px, transparent 1px);
-  background-size: 40px 14px, 8px 8px;
+  background-size: 40px 9px, 8px 5px;
   background-repeat: repeat-x;
   color: var(--ink);
 }

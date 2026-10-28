@@ -299,7 +299,7 @@ export default function Home() {
                   <span className="tile-sub">
                     {template.catalogue.length
                       ? `${template.catalogue.length} prix connus`
-                      : "Importer un ancien devis"}
+                      : "Importer un devis"}
                   </span>
                 </button>
               </div>
