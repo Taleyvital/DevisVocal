@@ -2,7 +2,7 @@ export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
 import { generateQuotePDF } from "@/lib/pdf";
-import { computeTotals, type ArtisanProfile } from "@/lib/quote";
+import { computeTotals, type ArtisanProfile, type QuoteItem } from "@/lib/quote";
 import {
   getNextQuoteNumber,
   saveQuote,
@@ -13,12 +13,9 @@ import {
 interface QuoteRequest {
   profile: ArtisanProfile;
   client: string;
-  items: {
-    designation: string;
-    quantity: number;
-    unit: string;
-    unit_price_fcfa: number;
-  }[];
+  project: string;
+  items: Omit<QuoteItem, "total_fcfa">[];
+  tvaRate: number;
   transcription: string;
 }
 
@@ -38,9 +35,10 @@ function parseRequest(body: unknown): QuoteRequest | null {
   for (const raw of b.items as Record<string, unknown>[]) {
     const quantity = amount(raw?.quantity);
     const unitPrice = amount(raw?.unit_price_fcfa);
-    const designation = str(raw?.designation);
+    const designation = str(raw?.designation, 300);
     if (quantity === null || unitPrice === null || !designation) return null;
     items.push({
+      section: str(raw.section, 100) || null,
       designation,
       quantity,
       unit: str(raw.unit, 20) || "u",
@@ -48,6 +46,7 @@ function parseRequest(body: unknown): QuoteRequest | null {
     });
   }
 
+  const rate = amount(b.tva_rate);
   const p = (b.profile ?? {}) as Record<string, unknown>;
   return {
     profile: {
@@ -56,9 +55,12 @@ function parseRequest(body: unknown): QuoteRequest | null {
       phone: str(p.phone, 30),
       email: str(p.email),
       address: str(p.address, 300),
+      legal: str(p.legal, 600),
     },
     client: str(b.client) || "À définir",
+    project: str(b.project, 300),
     items,
+    tvaRate: rate !== null && rate <= 0.5 ? rate : 0.18,
     transcription: str(b.transcription, 20000),
   };
 }
@@ -78,9 +80,10 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { profile, client, transcription } = request;
+  const { profile, client, project, tvaRate, transcription } = request;
   // Totals are always recomputed server-side
-  const { items, total_ht, tva, total_ttc } = computeTotals(request.items);
+  const totals = computeTotals(request.items, tvaRate);
+  const { items, total_ht, tva, total_ttc } = totals;
 
   let quoteNumber: string;
   try {
@@ -92,15 +95,14 @@ export async function POST(req: NextRequest) {
 
   let pdf: Buffer;
   try {
-    pdf = await generateQuotePDF(
-      profile,
+    pdf = await generateQuotePDF({
+      artisan: profile,
       quoteNumber,
       client,
-      items,
-      total_ht,
-      tva,
-      total_ttc
-    );
+      project,
+      totals,
+      tvaRate,
+    });
   } catch (err) {
     console.error("[quotes] generation error:", err);
     return NextResponse.json(

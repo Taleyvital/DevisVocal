@@ -1,4 +1,4 @@
-:root {
+""'':root {
   --brand: #1a3c5e;
   --brand-strong: #102a45;
   --brand-soft: #e8f0f8;
@@ -397,13 +397,35 @@ textarea {
   min-height: 44px;
 }
 
+.line-hint {
+  margin: -4px 0 4px;
+  font-size: 0.85rem;
+  color: var(--brand);
+}
+
 .line-total {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--tap);
+  margin-top: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.toggle input {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--brand);
+}
+
 .totals {
-  margin: 20px 0 0;
+  margin: 8px 0 0;
   padding: 14px 16px;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -435,6 +457,78 @@ textarea {
 
 .totals .grand dt {
   color: var(--text);
+}
+
+.amend {
+  margin-top: 24px;
+  padding: 14px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.amend .section-title {
+  margin: 0;
+}
+
+.amend-hint {
+  margin: 4px 0 12px;
+  font-size: 0.9rem;
+}
+
+.amend-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mic-sm {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border: none;
+  border-radius: 50%;
+  background: var(--brand);
+  color: #fff;
+  cursor: pointer;
+}
+
+.mic-sm.is-recording {
+  background: var(--recording);
+}
+
+.mic-sm:disabled:not(.is-recording) {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.spinner-sm {
+  width: 24px;
+  height: 24px;
+  border-width: 3px;
+}
+
+.amend-form {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  gap: 6px;
+}
+
+.amend-form input {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--tap);
+  padding: 8px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-size: 1rem;
+}
+
+.amend-form .btn {
+  min-height: var(--tap);
 }
 
 .transcript {
@@ -477,6 +571,11 @@ textarea {
   border-radius: 10px;
   background: var(--warn-soft);
   text-align: left;
+}
+
+.notice-info {
+  border-color: #9cc0e6;
+  background: var(--brand-soft);
 }
 
 .notice ul {

@@ -11,6 +11,7 @@ export const EMPTY_PROFILE: ArtisanProfile = {
   phone: "",
   email: "",
   address: "",
+  legal: "",
 };
 
 // The artisan profile lives on the device; it's sent with each quote.
@@ -44,12 +45,20 @@ const FIELDS: {
   type?: string;
   autoComplete: string;
   placeholder?: string;
+  multiline?: boolean;
 }[] = [
   { key: "company_name", label: "Nom de l'entreprise", autoComplete: "organization", placeholder: "Ex : Kouassi BTP" },
   { key: "name", label: "Votre nom", autoComplete: "name" },
   { key: "phone", label: "Téléphone", type: "tel", autoComplete: "tel", placeholder: "+225 07 00 00 00 00" },
   { key: "email", label: "Email", type: "email", autoComplete: "email" },
   { key: "address", label: "Adresse", autoComplete: "street-address" },
+  {
+    key: "legal",
+    label: "Mentions en bas de page (RCCM, NCC, banque…)",
+    autoComplete: "off",
+    placeholder: "RCCM CI-ABJ-2020-B-12345 · NCC 1234567 A",
+    multiline: true,
+  },
 ];
 
 export function ProfileSheet({
@@ -88,13 +97,22 @@ export function ProfileSheet({
         {FIELDS.map((f) => (
           <label key={f.key} className="field">
             <span>{f.label}</span>
-            <input
-              type={f.type ?? "text"}
-              autoComplete={f.autoComplete}
-              placeholder={f.placeholder}
-              value={draft[f.key]}
-              onChange={(e) => setDraft({ ...draft, [f.key]: e.target.value })}
-            />
+            {f.multiline ? (
+              <textarea
+                rows={2}
+                placeholder={f.placeholder}
+                value={draft[f.key]}
+                onChange={(e) => setDraft({ ...draft, [f.key]: e.target.value })}
+              />
+            ) : (
+              <input
+                type={f.type ?? "text"}
+                autoComplete={f.autoComplete}
+                placeholder={f.placeholder}
+                value={draft[f.key]}
+                onChange={(e) => setDraft({ ...draft, [f.key]: e.target.value })}
+              />
+            )}
           </label>
         ))}
         <div className="sheet-actions">

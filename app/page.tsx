@@ -1,18 +1,25 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { computeTotals, formatFCFA, type QuoteDraft } from "@/lib/quote";
+import {
+  computeTotals,
+  formatFCFA,
+  TVA_RATE,
+  type CatalogueItem,
+  type QuoteDraft,
+} from "@/lib/quote";
 import { BuildingIcon, MicIcon, ShareIcon, StopIcon } from "./components/icons";
 import { ProfileSheet, useProfile } from "./components/ProfileSheet";
 import {
   completeItems,
+  fromDraft,
   QuoteEditor,
-  toEditLine,
-  type EditLine,
+  toDraft,
+  type EditQuote,
 } from "./components/QuoteEditor";
 import { extensionFor, useRecorder } from "./components/useRecorder";
 
-type Phase = "idle" | "analyzing" | "editing" | "generating" | "ready";
+type Phase = "idle" | "analyzing" | "editing" | "amending" | "generating" | "ready";
 
 const MAX_SECONDS = 180;
 
@@ -32,12 +39,15 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [typing, setTyping] = useState(false);
   const [typedText, setTypedText] = useState("");
+  const [correction, setCorrection] = useState("");
 
   const [transcription, setTranscription] = useState("");
-  const [client, setClient] = useState("");
-  const [lines, setLines] = useState<EditLine[]>([]);
-  const [questions, setQuestions] = useState<string[]>([]);
+  const [quote, setQuote] = useState<EditQuote | null>(null);
   const [generated, setGenerated] = useState<GeneratedQuote | null>(null);
+
+  // Filled from an imported old quote (next step)
+  const catalogue: CatalogueItem[] = [];
+  const tvaRate = TVA_RATE;
 
   const [profile, setProfile] = useProfile();
   const [profileOpen, setProfileOpen] = useState(false);
@@ -58,15 +68,20 @@ export default function Home() {
     if (pdfUrlRef.current) URL.revokeObjectURL(pdfUrlRef.current);
   }, []);
 
+  // From the editor, speech is a correction applied to the current quote
   async function analyze(input: { audio?: Blob; text?: string }) {
+    const amending = phase === "editing" && quote !== null;
+    const fallbackPhase: Phase = amending ? "editing" : "idle";
     setError(null);
-    setPhase("analyzing");
+    setPhase(amending ? "amending" : "analyzing");
     const form = new FormData();
     if (input.audio) {
       form.append("audio", input.audio, `note.${extensionFor(input.audio.type)}`);
     } else {
       form.append("text", input.text ?? "");
     }
+    if (amending) form.append("current", JSON.stringify(toDraft(quote)));
+    if (catalogue.length) form.append("catalogue", JSON.stringify(catalogue));
 
     try {
       const res = await fetch("/api/analyze", { method: "POST", body: form });
@@ -77,23 +92,22 @@ export default function Home() {
       };
       if (!res.ok || !data.draft) {
         setError(data.error ?? "Une erreur est survenue. Réessayez.");
-        setPhase("idle");
+        setPhase(fallbackPhase);
         return;
       }
-      setTranscription(data.transcription ?? "");
-      setClient(data.draft.client === "À définir" ? "" : data.draft.client);
-      setLines(
-        data.draft.items.length ? data.draft.items.map(toEditLine) : [toEditLine()]
-      );
-      setQuestions(data.draft.questions);
+      const said = data.transcription ?? "";
+      setTranscription((prev) => (amending && prev ? `${prev}\n\nCorrection : ${said}` : said));
+      setQuote(fromDraft(data.draft, amending ? quote.tva : true));
+      setCorrection("");
       setPhase("editing");
     } catch {
       setError("Pas de connexion. Vérifiez votre réseau et réessayez.");
-      setPhase("idle");
+      setPhase(fallbackPhase);
     }
   }
 
-  const items = completeItems(lines);
+  const items = quote ? completeItems(quote.lines) : null;
+  const effectiveTva = quote?.tva ? tvaRate : 0;
 
   async function generate() {
     if (!items) return;
@@ -103,7 +117,14 @@ export default function Home() {
       const res = await fetch("/api/quotes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ profile, client, items, transcription }),
+        body: JSON.stringify({
+          profile,
+          client: quote?.client,
+          project: quote?.project,
+          items,
+          tva_rate: effectiveTva,
+          transcription,
+        }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -119,7 +140,7 @@ export default function Home() {
         number,
         file,
         url: URL.createObjectURL(blob),
-        totalTtc: computeTotals(items).total_ttc,
+        totalTtc: computeTotals(items, effectiveTva).total_ttc,
       });
       setPhase("ready");
     } catch {
@@ -131,7 +152,8 @@ export default function Home() {
   async function share() {
     if (!generated) return;
     const { file, number, totalTtc } = generated;
-    const text = `Devis ${number}${client ? ` – ${client}` : ""} : ${formatFCFA(totalTtc)} TTC`;
+    const client = quote?.client;
+    const text = `Devis ${number}${client ? ` – ${client}` : ""} : ${formatFCFA(totalTtc)}${effectiveTva ? " TTC" : ""}`;
 
     if (navigator.canShare?.({ files: [file] })) {
       try {
@@ -158,9 +180,8 @@ export default function Home() {
     if (generated) URL.revokeObjectURL(generated.url);
     setGenerated(null);
     setTranscription("");
-    setClient("");
-    setLines([]);
-    setQuestions([]);
+    setQuote(null);
+    setCorrection("");
     setTypedText("");
     setTyping(false);
     setError(null);
@@ -265,7 +286,7 @@ export default function Home() {
           </section>
         )}
 
-        {(phase === "editing" || phase === "generating") && (
+        {quote && (phase === "editing" || phase === "amending" || phase === "generating") && (
           <section>
             <div className="section-head">
               <h1>Votre devis</h1>
@@ -286,13 +307,66 @@ export default function Home() {
             )}
 
             <QuoteEditor
-              client={client}
-              onClientChange={setClient}
-              lines={lines}
-              onLinesChange={setLines}
-              questions={questions}
-              disabled={phase === "generating"}
+              quote={quote}
+              onChange={setQuote}
+              tvaRate={tvaRate}
+              disabled={phase !== "editing"}
             />
+
+            <div className="amend">
+              <h2 className="section-title">Corriger à la voix</h2>
+              <p className="muted amend-hint">
+                Ex&nbsp;: «&nbsp;ajoute 10 sacs de ciment à 5&nbsp;500&nbsp;», «&nbsp;enlève
+                la peinture&nbsp;», «&nbsp;le client c&apos;est M.&nbsp;Konan&nbsp;»
+              </p>
+              <div className="amend-row">
+                <button
+                  type="button"
+                  className={`mic-sm ${recorder.recording ? "is-recording" : ""}`}
+                  onClick={recorder.recording ? recorder.stop : recorder.start}
+                  disabled={phase !== "editing"}
+                  aria-label={
+                    recorder.recording ? "Terminer la correction" : "Dicter une correction"
+                  }
+                >
+                  {phase === "amending" ? (
+                    <span className="spinner spinner-sm" aria-hidden />
+                  ) : recorder.recording ? (
+                    <StopIcon size={26} />
+                  ) : (
+                    <MicIcon size={28} />
+                  )}
+                </button>
+                <form
+                  className="amend-form"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (correction.trim()) analyze({ text: correction });
+                  }}
+                >
+                  <input
+                    value={correction}
+                    onChange={(e) => setCorrection(e.target.value)}
+                    placeholder={
+                      recorder.recording
+                        ? `Enregistrement ${formatDuration(recorder.seconds)}…`
+                        : phase === "amending"
+                          ? "Correction en cours…"
+                          : "Ou écrivez une correction"
+                    }
+                    disabled={phase !== "editing" || recorder.recording}
+                    aria-label="Correction écrite"
+                  />
+                  <button
+                    type="submit"
+                    className="btn btn-primary btn-sm"
+                    disabled={!correction.trim() || phase !== "editing"}
+                  >
+                    OK
+                  </button>
+                </form>
+              </div>
+            </div>
 
             {transcription && (
               <details className="transcript">
@@ -306,7 +380,7 @@ export default function Home() {
                 type="button"
                 className="btn btn-primary btn-block btn-lg"
                 onClick={generate}
-                disabled={!items || phase === "generating"}
+                disabled={!items || phase !== "editing" || recorder.recording}
               >
                 {phase === "generating"
                   ? "Génération…"
@@ -323,8 +397,11 @@ export default function Home() {
             <div className="ready-card">
               <p className="muted">Devis prêt</p>
               <h1>{generated.number}</h1>
-              {client && <p>{client}</p>}
-              <p className="ready-total">{formatFCFA(generated.totalTtc)} TTC</p>
+              {quote?.client && <p>{quote.client}</p>}
+              <p className="ready-total">
+                {formatFCFA(generated.totalTtc)}
+                {effectiveTva ? " TTC" : ""}
+              </p>
             </div>
 
             <button
