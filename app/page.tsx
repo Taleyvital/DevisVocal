@@ -1,15 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import {
-  computeTotals,
-  formatFCFA,
-  TVA_RATE,
-  type CatalogueItem,
-  type QuoteDraft,
-} from "@/lib/quote";
+import { computeTotals, formatFCFA, type QuoteDraft } from "@/lib/quote";
 import { BuildingIcon, MicIcon, ShareIcon, StopIcon } from "./components/icons";
-import { ProfileSheet, useProfile } from "./components/ProfileSheet";
+import { ProfileSheet, useProfile, useTemplate } from "./components/ProfileSheet";
 import {
   completeItems,
   fromDraft,
@@ -45,11 +39,10 @@ export default function Home() {
   const [quote, setQuote] = useState<EditQuote | null>(null);
   const [generated, setGenerated] = useState<GeneratedQuote | null>(null);
 
-  // Filled from an imported old quote (next step)
-  const catalogue: CatalogueItem[] = [];
-  const tvaRate = TVA_RATE;
 
   const [profile, setProfile] = useProfile();
+  const [template, setTemplate] = useTemplate();
+  const { catalogue, tva_rate: tvaRate } = template;
   const [profileOpen, setProfileOpen] = useState(false);
   const hasProfile = Boolean(profile.company_name || profile.name);
 
@@ -97,7 +90,7 @@ export default function Home() {
       }
       const said = data.transcription ?? "";
       setTranscription((prev) => (amending && prev ? `${prev}\n\nCorrection : ${said}` : said));
-      setQuote(fromDraft(data.draft, amending ? quote.tva : true));
+      setQuote(fromDraft(data.draft, amending ? quote.tva : template.apply_tva));
       setCorrection("");
       setPhase("editing");
     } catch {
@@ -123,6 +116,7 @@ export default function Home() {
           project: quote?.project,
           items,
           tva_rate: effectiveTva,
+          template: { ...template, catalogue: [] },
           transcription,
         }),
       });
@@ -153,11 +147,12 @@ export default function Home() {
     if (!generated) return;
     const { file, number, totalTtc } = generated;
     const client = quote?.client;
-    const text = `Devis ${number}${client ? ` – ${client}` : ""} : ${formatFCFA(totalTtc)}${effectiveTva ? " TTC" : ""}`;
+    const label = template.title.charAt(0) + template.title.slice(1).toLowerCase();
+    const text = `${label} ${number}${client ? ` – ${client}` : ""} : ${formatFCFA(totalTtc)}${effectiveTva ? " TTC" : ""}`;
 
     if (navigator.canShare?.({ files: [file] })) {
       try {
-        await navigator.share({ files: [file], title: `Devis ${number}`, text });
+        await navigator.share({ files: [file], title: `${label} ${number}`, text });
       } catch (err) {
         if ((err as DOMException)?.name !== "AbortError") {
           setError("Le partage a échoué. Téléchargez le PDF puis envoyez-le.");
@@ -399,7 +394,7 @@ export default function Home() {
               <h1>{generated.number}</h1>
               {quote?.client && <p>{quote.client}</p>}
               <p className="ready-total">
-                {formatFCFA(generated.totalTtc)}
+                {formatFCFA(generated.totalTtc, template.currency)}
                 {effectiveTva ? " TTC" : ""}
               </p>
             </div>
@@ -439,6 +434,8 @@ export default function Home() {
         <ProfileSheet
           profile={profile}
           onSave={setProfile}
+          template={template}
+          onTemplateChange={setTemplate}
           onClose={() => setProfileOpen(false)}
         />
       )}
