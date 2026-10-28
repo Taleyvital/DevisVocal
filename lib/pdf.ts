@@ -1,5 +1,6 @@
 import PDFDocument from "pdfkit";
-import type { Artisan, QuoteItem } from "./supabase";
+import type { Artisan } from "./supabase";
+import type { QuoteItem } from "./quote";
 
 function formatFCFA(amount: number): string {
   return amount.toLocaleString("fr-FR") + " FCFA";

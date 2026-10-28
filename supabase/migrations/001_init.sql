@@ -26,8 +26,8 @@ CREATE TABLE IF NOT EXISTS quotes (
 );
 
 -- Storage bucket for PDFs (run once via Supabase dashboard or CLI)
--- INSERT INTO storage.buckets (id, name, public) VALUES ('quotes', 'quotes', true)
--- ON CONFLICT DO NOTHING;
+ INSERT INTO storage.buckets (id, name, public) VALUES ('quotes', 'quotes', true)
+ ON CONFLICT DO NOTHING;
 
 -- Policies: allow service role full access
 ALTER TABLE artisans ENABLE ROW LEVEL SECURITY;

@@ -1,9 +1,20 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { ArtisanProfile, QuoteItem } from "./quote";
 
-export const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_ANON_KEY!
-);
+let client: SupabaseClient | null = null;
+
+// Server-only: uses the service role key, which bypasses RLS.
+export function getSupabase(): SupabaseClient {
+  if (!client) {
+    const url = process.env.SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !key) {
+      throw new Error("SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY manquants");
+    }
+    client = createClient(url, key, { auth: { persistSession: false } });
+  }
+  return client;
+}
 
 export interface Artisan {
   id: string;
@@ -14,17 +25,9 @@ export interface Artisan {
   address: string | null;
 }
 
-export interface QuoteItem {
-  designation: string;
-  quantity: number;
-  unit: string;
-  unit_price_fcfa: number;
-  total_fcfa: number;
-}
-
 export interface Quote {
   id: string;
-  artisan_id: string;
+  artisan_id: string | null;
   quote_number: string;
   client_name: string;
   items: QuoteItem[];
@@ -37,29 +40,29 @@ export interface Quote {
   created_at: string;
 }
 
-export async function getOrCreateArtisan(phoneNumber: string): Promise<Artisan> {
-  const { data, error } = await supabase
+// The artisan is identified by phone number (no accounts yet).
+export async function upsertArtisan(profile: ArtisanProfile): Promise<Artisan> {
+  const { data, error } = await getSupabase()
     .from("artisans")
-    .select("*")
-    .eq("phone_number", phoneNumber)
+    .upsert(
+      {
+        phone_number: profile.phone,
+        name: profile.name || null,
+        company_name: profile.company_name || null,
+        email: profile.email || null,
+        address: profile.address || null,
+      },
+      { onConflict: "phone_number" }
+    )
+    .select()
     .single();
-
-  if (error && error.code === "PGRST116") {
-    const { data: created, error: createError } = await supabase
-      .from("artisans")
-      .insert({ phone_number: phoneNumber })
-      .select()
-      .single();
-    if (createError) throw createError;
-    return created as Artisan;
-  }
   if (error) throw error;
   return data as Artisan;
 }
 
 export async function getNextQuoteNumber(): Promise<string> {
   const year = new Date().getFullYear();
-  const { count } = await supabase
+  const { count } = await getSupabase()
     .from("quotes")
     .select("*", { count: "exact", head: true })
     .gte("created_at", `${year}-01-01`);
@@ -67,8 +70,22 @@ export async function getNextQuoteNumber(): Promise<string> {
   return `DEV-${year}-${seq}`;
 }
 
+export async function uploadQuotePDF(
+  quoteNumber: string,
+  pdf: Buffer
+): Promise<string> {
+  // Random suffix so public URLs can't be guessed from the quote number
+  const path = `${quoteNumber}-${crypto.randomUUID()}.pdf`;
+  const storage = getSupabase().storage.from("quotes");
+  const { data, error } = await storage.upload(path, pdf, {
+    contentType: "application/pdf",
+  });
+  if (error) throw error;
+  return storage.getPublicUrl(data.path).data.publicUrl;
+}
+
 export async function saveQuote(
-  artisanId: string,
+  artisanId: string | null,
   quoteNumber: string,
   clientName: string,
   items: QuoteItem[],
@@ -78,7 +95,7 @@ export async function saveQuote(
   rawTranscription: string,
   pdfUrl: string | null
 ): Promise<Quote> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from("quotes")
     .insert({
       artisan_id: artisanId,

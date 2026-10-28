@@ -1,4 +1,4 @@
-import type { QuoteItem } from "./supabase";
+import type { QuoteItem } from "./quote";
 
 export interface ExtractedQuote {
   client: string;
