@@ -51,6 +51,11 @@ export function computeTotals(
   return { items: withTotals, total_ht, tva, total_ttc: total_ht + tva };
 }
 
+// fr-FR groups thousands with U+202F, which PDF standard fonts can't draw
+export function formatNumber(amount: number): string {
+  return amount.toLocaleString("fr-FR").replace(/\u202f/g, "\u00a0");
+}
+
 export function formatFCFA(amount: number): string {
-  return amount.toLocaleString("fr-FR") + " FCFA";
+  return formatNumber(amount) + "\u00a0FCFA";
 }

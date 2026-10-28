@@ -1,5 +1,5 @@
 import PDFDocument from "pdfkit";
-import { formatFCFA, type ArtisanProfile, type QuoteItem } from "./quote";
+import { formatFCFA, formatNumber, type ArtisanProfile, type QuoteItem } from "./quote";
 
 function formatDate(date: Date): string {
   return date.toLocaleDateString("fr-FR", {
@@ -67,8 +67,7 @@ export async function generateQuotePDF(
       });
 
     // ─── Client block ─────────────────────────────────────────
-    doc.moveDown(2);
-    doc.fillColor(BLUE).fontSize(11).font("Helvetica-Bold").text("CLIENT");
+    doc.fillColor(BLUE).fontSize(11).font("Helvetica-Bold").text("CLIENT", 50, 150);
     doc
       .fillColor("black")
       .fontSize(11)
@@ -113,13 +112,13 @@ export async function generateQuotePDF(
           width: 240,
           ellipsis: true,
         })
-        .text(String(item.quantity), colX.qty, rowY + 4, { width: 35, align: "right" })
+        .text(formatNumber(item.quantity), colX.qty, rowY + 4, { width: 35, align: "right" })
         .text(item.unit, colX.unit, rowY + 4)
-        .text(item.unit_price_fcfa.toLocaleString("fr-FR"), colX.unitPrice, rowY + 4, {
+        .text(formatNumber(item.unit_price_fcfa), colX.unitPrice, rowY + 4, {
           width: 85,
           align: "right",
         })
-        .text(item.total_fcfa.toLocaleString("fr-FR"), colX.total, rowY + 4, {
+        .text(formatNumber(item.total_fcfa), colX.total, rowY + 4, {
           width: 65,
           align: "right",
         });
