@@ -10,6 +10,7 @@ import {
   type QuoteTemplate,
 } from "@/lib/template";
 import { prepareQuoteFile } from "./prepareQuoteFile";
+import { LayoutPreview } from "./LayoutPreview";
 import { useStored } from "./useStored";
 
 export const EMPTY_PROFILE: ArtisanProfile = {
@@ -200,8 +201,16 @@ export function ProfileSheet({
             </div>
           )}
 
+          {hasTemplate && tpl.layout && (
+            <>
+              <p className="layout-caption">Aperçu — vos prochains devis ressembleront à ceci</p>
+              <LayoutPreview template={tpl} profile={draft} />
+            </>
+          )}
+
           {hasTemplate && (
             <div className="template-summary">
+              {!tpl.layout && (
               <div className="template-preview" aria-hidden>
                 <span
                   className="swatch-head"
@@ -217,8 +226,10 @@ export function ProfileSheet({
                 <span className="swatch-row" />
                 <span className="swatch-row" style={{ background: tpl.accent_color }} />
               </div>
+              )}
               <ul className="template-facts">
                 <li>D&apos;après : {tpl.source}</li>
+                <li>{tpl.layout ? "Mise en page reproduite" : "Couleurs et textes repris"}</li>
                 <li>
                   {tpl.apply_tva
                     ? `TVA ${Math.round(tpl.tva_rate * 1000) / 10} %`
