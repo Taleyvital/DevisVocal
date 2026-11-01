@@ -1026,6 +1026,11 @@ textarea {
   padding-left: 20px;
 }
 
+.notice-text {
+  margin: 4px 0 10px;
+  font-size: 0.9rem;
+}
+
 .notice-info {
   border-left-color: var(--tape-deep);
 }

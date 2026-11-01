@@ -57,7 +57,7 @@ function parseRequest(body: unknown): QuoteRequest | null {
     profile: {
       company_name: str(p.company_name),
       name: str(p.name),
-      phone: str(p.phone, 30),
+      phone: str(p.phone, 80),
       email: str(p.email),
       address: str(p.address, 300),
       legal: str(p.legal, 600),

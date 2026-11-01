@@ -117,7 +117,7 @@ export function sanitizeBusiness(raw: unknown): BusinessInfo {
   return {
     company_name: str(r.company_name, 200),
     name: str(r.name, 200),
-    phone: str(r.phone, 30),
+    phone: str(r.phone, 80),
     email: str(r.email, 200),
     address: str(r.address, 300),
     legal: str(r.legal, 600),

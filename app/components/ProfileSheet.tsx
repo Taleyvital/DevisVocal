@@ -203,6 +203,19 @@ export function ProfileSheet({
             </div>
           )}
 
+          {hasTemplate && !tpl.layout && !importing && (
+            <div className="notice notice-info" role="status">
+              <strong>Mise en page non reproduite</strong>
+              <p className="notice-text">
+                Ce modèle ne reprend que les couleurs et les textes de votre ancien devis. Réimportez-le
+                pour que vos devis aient exactement la même présentation.
+              </p>
+              <button type="button" className="btn btn-ink btn-sm" onClick={() => fileRef.current?.click()}>
+                Réimporter {tpl.source}
+              </button>
+            </div>
+          )}
+
           {hasTemplate && tpl.layout && (
             <>
               <p className="layout-caption">Aperçu — vos prochains devis ressembleront à ceci</p>

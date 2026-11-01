@@ -74,24 +74,38 @@ export async function generateQuotePDF({
     } else {
       doc.rect(left, 128, pageWidth, 2).fill(PRIMARY);
     }
-    doc
-      .fillColor(HEADER_TEXT)
-      .fontSize(22)
-      .font(BOLD)
-      .text(artisan.company_name || artisan.name || "Devis", 60, 65, {
-        width: 330,
-        ellipsis: true,
-        lineBreak: false,
-      });
-    doc.fontSize(10).font(FONT).fillColor(band ? "white" : "#333333");
+    // Company name: shrink to fit one line, else wrap on two at the
+    // smallest size; contact lines start right below whatever it took
+    const companyName = artisan.company_name || artisan.name || "Devis";
+    const nameWidth = 265;
+    let nameSize = 22;
+    doc.font(BOLD);
+    while (nameSize > 14 && doc.fontSize(nameSize).widthOfString(companyName) > nameWidth) {
+      nameSize -= 1;
+    }
+    const nameHeight = Math.min(
+      doc.fontSize(nameSize).heightOfString(companyName, { width: nameWidth }),
+      nameSize * 2.3
+    );
+    doc.fillColor(HEADER_TEXT).text(companyName, 60, 60, {
+      width: nameWidth,
+      height: nameHeight + nameSize, // pdfkit needs slack to keep the last line
+      ellipsis: true,
+    });
+
+    const headerBottom = 126;
+    doc.fontSize(9.5).font(FONT).fillColor(band ? "white" : "#333333");
     const contactLines = [
       artisan.phone && `Tél : ${artisan.phone}`,
       artisan.email && `Email : ${artisan.email}`,
       artisan.address,
     ].filter(Boolean) as string[];
-    contactLines.forEach((line, i) =>
-      doc.text(line, 60, 95 + i * 11, { width: 330, ellipsis: true, lineBreak: false })
-    );
+    let contactY = 60 + nameHeight + 4;
+    for (const line of contactLines) {
+      if (contactY + 10 > headerBottom) break;
+      doc.text(line, 60, contactY, { width: 330, height: 11, ellipsis: true });
+      contactY += 11;
+    }
 
     doc
       .fillColor(HEADER_TEXT)
