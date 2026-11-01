@@ -96,12 +96,24 @@ function fill(template: string, vars: Vars, raw: Record<string, string> = {}): s
     }
   );
   out = out.replace(/\{\{\{\s*(\w+)\s*\}\}\}/g, (_, key: string) => raw[key] ?? "");
-  out = out.replace(/\{\{\s*(\w+)\s*\}\}/g, (_, key: string) => {
+  out = out.replace(/\{\{\s*(\w+)\s*\}\}/g, (_, key: string, offset: number, whole: string) => {
     const value = vars[key];
     if (typeof value !== "string") return "";
-    return escapeHtml(value).replace(/\n/g, "<br>");
+    return escapeHtml(dropRepeatedLabel(value, whole.slice(Math.max(0, offset - 200), offset))).replace(
+      /\n/g,
+      "<br>"
+    );
   });
   return out;
+}
+
+// "CONDITIONS : CONDITIONS : …" — the value often carries the label the
+// layout already prints just before the placeholder.
+function dropRepeatedLabel(value: string, before: string): string {
+  const match = value.match(/^\s*([^:\n]{2,60}?)\s*:\s*/);
+  if (!match) return value;
+  const text = before.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").toLowerCase();
+  return text.includes(match[1].trim().toLowerCase()) ? value.slice(match[0].length) : value;
 }
 
 function formatNumber(n: number, thousands: " " | "."): string {
@@ -212,7 +224,7 @@ export function renderQuoteHtml(input: RenderInput): string {
       tva_rate: `${Math.round(tvaRate * 1000) / 10} %`,
       total_ttc: n(totals.total_ttc),
       total: n(totals.total_ttc),
-      total_words: words ? `${words} ${input.currency === "FCFA" ? "francs CFA" : input.currency}` : "",
+      total_words: words, // currency wording is part of the layout's own text
       has_tva: tvaRate > 0,
     },
     { rows }

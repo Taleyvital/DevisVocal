@@ -93,17 +93,79 @@ export async function extractTemplate(
     });
   }
 
-  const parsed = await chatJSON<{ template?: unknown; business?: unknown }>(
-    [
-      { role: "developer", content: SYSTEM_PROMPT },
-      { role: "user", content },
-    ],
-    "modele_devis",
-    TEMPLATE_SCHEMA
-  );
+  const messages = (system: string): ChatMessage[] => [
+    { role: "developer", content: system },
+    { role: "user", content },
+  ];
+
+  // Style/catalogue and the faithful HTML layout are independent: run both,
+  // the layout is optional (the standard PDF is used without it).
+  const [parsed, layout] = await Promise.all([
+    chatJSON<{ template?: unknown; business?: unknown }>(
+      messages(SYSTEM_PROMPT),
+      "modele_devis",
+      TEMPLATE_SCHEMA
+    ),
+    chatJSON<unknown>(messages(LAYOUT_PROMPT), "gabarit_html", LAYOUT_SCHEMA).catch((err) => {
+      console.error("[template] layout extraction failed (non-fatal):", err);
+      return null;
+    }),
+  ]);
 
   return {
-    template: sanitizeTemplate({ ...(parsed.template as object), source }),
+    template: sanitizeTemplate({ ...(parsed.template as object), source, layout }),
     business: sanitizeBusiness(parsed.business),
   };
 }
+
+const LAYOUT_SCHEMA = {
+  type: "object",
+  properties: {
+    html: { type: "string", description: "Document HTML complet (avec <style>) au format A4, contenant {{{rows}}}" },
+    item_row: { type: "string", description: "Une ligne <tr> d'article" },
+    section_row: { type: "string", description: "Une ligne <tr> de titre de section, chaîne vide si le devis n'a pas de sections" },
+    thousands: { type: "string", enum: [" ", "."], description: "Séparateur de milliers utilisé sur le devis" },
+  },
+  required: ["html", "item_row", "section_row", "thousands"],
+};
+
+const LAYOUT_PROMPT = `Tu reproduis en HTML/CSS la mise en page d'un ancien devis d'artisan (image fournie),
+pour générer ses prochains devis avec EXACTEMENT la même présentation.
+
+OBJECTIF : quelqu'un qui compare l'ancien devis et le nouveau doit reconnaître le même document :
+mêmes blocs aux mêmes endroits, mêmes bordures, mêmes couleurs (hex estimés), mêmes tailles de texte
+relatives, mêmes majuscules/italiques/soulignements, mêmes intitulés de colonnes, même ordre.
+
+FORMAT
+- Page A4 : 210mm de large. Mets les marges dans le CSS du body (padding en mm), @page { margin: 0 }.
+- Polices : uniquement des familles génériques (Arial, Helvetica, sans-serif, serif). Pas de @font-face.
+- Tout le CSS dans une seule balise <style>. Mise en page en flex/grid/table, pas de position absolue.
+- INTERDIT : <script>, <img>, <svg>, liens, URL externes, formulaires. Le logo : remplace-le par
+  {{company_name}} stylé comme sur l'original (ou un bloc de couleur s'il s'agit d'une forme).
+
+CHAMPS À INSÉRER (remplace TOUTES les données variables de l'ancien devis par ces champs)
+- Entreprise : {{company_name}} {{name}} {{phone}} {{email}} {{address}} {{legal}}
+- Document : {{title}} (ex : DEVIS, FACTURE PRO-FORMA) {{number}} {{date}} (« 3 novembre 2026 ») {{date_short}} (« 03/11/2026 »)
+- Client : {{client}} {{project}} (objet / chantier)
+- Totaux : {{total_ht}} {{tva}} {{tva_rate}} {{total_ttc}} {{total}} {{currency}}
+  Montant en lettres : {{total_words}} = le nombre en lettres SEUL, sans la monnaie
+  (ex : « Arrêté le présent devis à la somme de : {{total_words}} francs CFA »)
+- Conditions de paiement/validité : {{conditions}}
+- Blocs conditionnels : {{#has_tva}}…{{/has_tva}} (lignes TVA/TTC), {{^has_tva}}…{{/has_tva}} (sans TVA),
+  {{#project}}…{{/project}} si l'objet est facultatif.
+- Lignes du tableau : à l'intérieur de <tbody>, écris {{{rows}}} (trois accolades) à la place des articles.
+  Les lignes de totaux restent après {{{rows}}} dans le même tableau si c'est le cas sur l'original.
+
+LIGNES
+- "item_row" : UNE balise <tr> d'article, avec autant de cellules que l'en-tête, styles inline possibles.
+  Champs : {{num}} {{designation}} {{quantity}} {{unit}} {{unit_price}} {{total}}.
+  N'utilise {{unit}} que si l'original a une colonne ou une mention d'unité.
+- "section_row" : UNE balise <tr> de titre de section (ex : « A1 | Fourniture et pose… »), champs {{code}} {{section}} {{subtotal}}.
+  Chaîne vide si l'original n'a pas de sections.
+
+TEXTES FIXES : recopie mot pour mot les textes propres à l'entreprise qui ne changent pas d'un devis
+à l'autre (slogan, activité, « NB : … », « BON POUR ACCORD », intitulés), sauf les conditions → {{conditions}}.
+N'écris AUCUNE donnée de l'ancien client ni aucun montant de l'ancien devis.
+Les champs contiennent seulement la valeur : garde les intitulés (« CONDITIONS PARTICULIÈRES : »,
+« Tél : »…) dans le gabarit, devant le champ, comme sur l'original.
+Retourne UNIQUEMENT du JSON valide.`;
