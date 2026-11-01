@@ -10,7 +10,7 @@ import {
   type QuoteTemplate,
 } from "@/lib/template";
 import { prepareQuoteFile } from "./prepareQuoteFile";
-import { LayoutPreview } from "./LayoutPreview";
+import { blobToDataUrl, LayoutPreview, saveOriginalPage } from "./LayoutPreview";
 import { useStored } from "./useStored";
 
 export const EMPTY_PROFILE: ArtisanProfile = {
@@ -107,6 +107,8 @@ export function ProfileSheet({
       const learned = sanitizeTemplate(data.template);
       setTpl(learned);
       onTemplateChange(learned); // saved right away: importing costs an API call
+      // Keep the first page to compare with the HTML version (device only)
+      saveOriginalPage(await blobToDataUrl(pages[0]).catch(() => null));
 
       // Only fill the fields the artisan left empty
       const business = data.business ?? {};
@@ -274,6 +276,7 @@ export function ProfileSheet({
                 className="link-btn"
                 onClick={() => {
                   setTpl(DEFAULT_TEMPLATE);
+                  saveOriginalPage(null);
                   onTemplateChange(DEFAULT_TEMPLATE);
                   setImportNote(null);
                 }}
