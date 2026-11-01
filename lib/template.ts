@@ -1,6 +1,7 @@
 // Quote layout learned from an artisan's old quote.
 // Shared between server and browser — no server-only imports here.
 import { TVA_RATE, type ArtisanProfile, type CatalogueItem } from "./quote";
+import { sanitizeLayout, type HtmlLayout } from "./html-template";
 
 export interface QuoteTemplate {
   title: string; // "DEVIS", "DEVIS ESTIMATIF", "FACTURE PROFORMA"…
@@ -15,6 +16,7 @@ export interface QuoteTemplate {
   signature: string; // label above the client's signature box, "" for none
   catalogue: CatalogueItem[];
   source: string; // file it was learned from, "" for the default
+  layout: HtmlLayout | null; // faithful HTML copy of the old quote, if learned
 }
 
 export const DEFAULT_CONDITIONS =
@@ -35,6 +37,7 @@ export const DEFAULT_TEMPLATE: QuoteTemplate = {
   signature: "",
   catalogue: [],
   source: "",
+  layout: null,
 };
 
 const str = (v: unknown, max: number) =>
@@ -102,6 +105,7 @@ export function sanitizeTemplate(raw: unknown): QuoteTemplate {
     signature: str(r.signature, 80),
     catalogue: sanitizeCatalogue(r.catalogue),
     source: str(r.source, 120),
+    layout: sanitizeLayout(r.layout),
   };
 }
 

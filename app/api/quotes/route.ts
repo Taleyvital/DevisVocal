@@ -1,7 +1,10 @@
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 import { NextRequest, NextResponse } from "next/server";
 import { generateQuotePDF } from "@/lib/pdf";
+import { renderQuoteHtml } from "@/lib/html-template";
+import { htmlToPdf } from "@/lib/html-pdf";
 import { computeTotals, type ArtisanProfile, type QuoteItem } from "@/lib/quote";
 import { sanitizeTemplate, type QuoteTemplate } from "@/lib/template";
 import {
@@ -96,9 +99,32 @@ export async function POST(req: NextRequest) {
     quoteNumber = `DEV-${new Date().getFullYear()}-${Date.now().toString(36).toUpperCase()}`;
   }
 
-  let pdf: Buffer;
+  let pdf: Buffer | null = null;
+
+  // Faithful copy of the artisan's old quote, when one was learned
+  if (template.layout) {
+    try {
+      pdf = await htmlToPdf(
+        renderQuoteHtml({
+          layout: template.layout,
+          artisan: profile,
+          title: template.title,
+          quoteNumber,
+          client,
+          project,
+          conditions: template.conditions,
+          currency: template.currency,
+          totals,
+          tvaRate,
+        })
+      );
+    } catch (err) {
+      console.error("[quotes] html layout error (falling back):", err);
+    }
+  }
+
   try {
-    pdf = await generateQuotePDF({
+    pdf ??= await generateQuotePDF({
       artisan: profile,
       quoteNumber,
       client,

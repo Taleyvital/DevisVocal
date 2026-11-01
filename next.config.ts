@@ -1,7 +1,17 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["fluent-ffmpeg", "@ffmpeg-installer/ffmpeg", "pdfkit"],
+  serverExternalPackages: [
+    "fluent-ffmpeg",
+    "@ffmpeg-installer/ffmpeg",
+    "pdfkit",
+    "puppeteer-core",
+    "@sparticuz/chromium",
+  ],
+  // Chromium's compressed binaries are read at runtime, not imported
+  outputFileTracingIncludes: {
+    "/api/quotes": ["./node_modules/@sparticuz/chromium/bin/**"],
+  },
   async headers() {
     return [
       {
